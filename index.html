@@ -264,6 +264,48 @@ td.hd-warn,tr.hd-warn td{color:var(--color-warn)}td.hd-bad{color:var(--color-bad
 .cm-n b{font-size:1.15rem}.cm-n p{margin:4px 0 8px;color:var(--color-fg-muted);font-size:var(--cds-font-size-body)}
 .cm-n ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:5px;font-size:var(--cds-font-size-body);line-height:1.45}
 .cm-normal{border-top-color:var(--color-ok)}.cm-vig{border-top-color:var(--color-warn)}.cm-alerta{border-top-color:var(--color-bad)}
+
+.vm-chart svg{touch-action:pan-y}
+@media (max-width:640px){
+  #dash-root{padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+  .vm{gap:14px}
+  .vm-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-inline:-12px;padding-inline:12px;gap:0;box-shadow:0 6px 10px -10px rgba(0,0,0,.35)}
+  .vm-tabs::-webkit-scrollbar{display:none}
+  .vm-tab{white-space:nowrap;padding:10px 12px;flex:none}
+  .pt{gap:12px;padding-top:4px}
+  .pt .vm-title{font-size:1.7rem}
+  .pt-sub{font-size:.95rem}
+  .pt-meta{gap:6px 18px}.pt-meta dd{font-size:.86rem}
+  .pt-foto{aspect-ratio:16/9;max-height:200px}
+  .pt-side .vm-logos [data-draw=img] img{height:26px}
+  .pt-hal{grid-template-columns:1fr 1fr;gap:10px}
+  .pt-card{padding:10px 12px}
+  .pt-k{font-size:10px}.pt-v{font-size:1.15rem}.pt-n{font-size:11px}
+  .vm-tiles{grid-template-columns:1fr 1fr;gap:10px}
+  .vm-tile{padding:10px 12px}
+  .vm-tile-value{font-size:1.3rem}
+  .vm-tile-note,.vm-tile-label{font-size:11px}
+  .vm-card{padding:14px 12px;gap:8px}
+  .vm-card h2,.vm-card h3{font-size:1rem}
+  .vm-note{font-size:12px}
+  .vm-controls{gap:6px}
+  .vm-leg,.vm-seg button{font-size:12px;padding:5px 9px}
+  .vm-table{font-size:12px}
+  .vm-table th,.vm-table td{padding:6px 8px}
+  .vm-tablebox .vm-table th,.vm-tablebox .vm-table td{white-space:nowrap}
+  .vm-tablebox{max-height:340px}
+  .hd-estado-grid{gap:10px}
+  .hd-semaforo{gap:10px}
+  .hd-luz{width:36px;height:36px}
+  .mp-mapa{height:360px;min-height:300px}
+  .sim-ctrl{grid-template-columns:1fr 1fr;gap:10px 12px}
+  .sim-ctrl label:first-child,.sim-btns{grid-column:1/-1}
+  .hd-corr-row{grid-template-columns:6.5rem 1fr 4rem}
+  .vm-kv{grid-template-columns:7rem 1fr}
+  .cm-n{padding:12px}
+  .vm-section-title{font-size:1.25rem}
+  .vm-check{font-size:12px}
+}
 @media print{
   body{background:#fff}
   .vm-tabs,.vm-sync,.vm-controls,.vm-seg,.sim-ctrl,.sim-esc input,.hd-status-btns,.vm-btn,.leaflet-control-container,.vm-tip,.hd-alias{display:none!important}
@@ -2043,7 +2085,9 @@ dash.draw('serie', (el) => {
       document.querySelectorAll('[data-hd-rango]').forEach((q) => q.setAttribute('aria-pressed', 'false'));
       ['hd-main', 'hd-over', 'hd-stats', 'hd-hieto', 'hd-tabla'].forEach((n) => dash.draw(n));
     });
-    const zg = svg.append('g').attr('class', 'hd-zoom').call(zb);
+    const tactil = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+    const zg = svg.append('g').attr('class', 'hd-zoom');
+    if (!tactil) zg.call(zb);
     zg.selectAll('.selection').attr('fill', css('--hd-linea')).attr('fill-opacity', 0.1).attr('stroke', 'none');
     zg.select('.overlay').style('cursor', 'zoom-in');
     zg.on('dblclick.reset', () => setRango('todo'));
@@ -2698,7 +2742,7 @@ dash.draw('serie', (el) => {
     if (el._map) { el._map.invalidateSize(); return; }
     if (!window.L) return mapaSinConexion(el);
     el.replaceChildren();
-    const map = L.map(el, { scrollWheelZoom: false, zoomControl: true });
+    const map = L.map(el, { scrollWheelZoom: false, zoomControl: true, dragging: !L.Browser.mobile, tap: !L.Browser.mobile });
     const relieve = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenStreetMap, SRTM · OpenTopoMap (CC-BY-SA)' });
     const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imágenes © Esri, Maxar, Earthstar Geographics' });
     const calles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
@@ -3060,6 +3104,12 @@ dash.draw('serie', (el) => {
     bars.on('pointerleave', () => tip.hide());
   });
 
+  // En el teléfono, mantener visible la pestaña activa
+  document.querySelectorAll('.vm-tab').forEach((t) => t.addEventListener('click', () => {
+    try { t.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }); } catch (e) {}
+    const nav = document.querySelector('.vm-tabs');
+    if (nav && nav.getBoundingClientRect().top < 0) nav.scrollIntoView({ block: 'start' });
+  }));
   // Imprimir: muestra todas las secciones mientras se imprime
   let ocultas = [];
   const antes = () => { ocultas = [...document.querySelectorAll('.vm-page[hidden]')]; ocultas.forEach((p) => { p.hidden = false; }); document.querySelectorAll('.pt-guia').forEach((d) => { d.open = true; }); dash._run(); };
